@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="LandingPage.Views.StartPageView"
+<UserControl x:Class="LandingPage.Views.StartPageView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -37,7 +37,7 @@
         <KeyBinding Command="{Binding ExitEditModeCommand}" Key="Esc"/>
     </UserControl.InputBindings>
     <UserControl.ContextMenu>
-        <ContextMenu Grid.IsSharedSizeScope="True">
+        <ContextMenu Grid.IsSharedSizeScope="True" Foreground="{DynamicResource TextBrush}">
             <MenuItem x:Name="NextBackgroundEntry" Command="{Binding NextRandomBackgroundCommand}" Header="{DynamicResource LOC_SPG_NextRandomBackground}" 
                                       Visibility="{Binding IsEnabled, RelativeSource={RelativeSource Mode=Self}, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
@@ -104,6 +104,7 @@
                       Visibility="{Binding RootNodeViewModel.EditModeEnabled, Converter={StaticResource InvertedBooleanToVisibilityConverter}}"/>
             <MenuItem Command="{Binding ExitEditModeCommand}" Header="{DynamicResource LOC_SPG_ExitEditMode}"
                       Visibility="{Binding RootNodeViewModel.EditModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+            <MenuItem Command="{Binding ResetLayoutCommand}" Header="{DynamicResource LOC_SPG_ResetLayout}"/>
         </ContextMenu>
     </UserControl.ContextMenu>
     <Grid>

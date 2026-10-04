@@ -1,4 +1,4 @@
-﻿using LandingPage.Models.Layout;
+using LandingPage.Models.Layout;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -232,7 +232,7 @@ namespace LandingPage.ViewModels.Layout
             SetHorizontalAlignmentCommand = new RelayCommand<HorizontalAlignment>(SetHorizontalAlignment);
             SetVerticalAlignmentCommand = new RelayCommand<VerticalAlignment>(SetVerticalAlignment);
 
-            OpenWikiCommand = new RelayCommand(() => Process.Start("https://github.com/felixkmh/StartPage-for-Playnite/wiki/Integrating-with-other-Extensions"));
+            OpenWikiCommand = new RelayCommand(() => Process.Start(new ProcessStartInfo("https://github.com/felixkmh/StartPage-for-Playnite/wiki/Integrating-with-other-Extensions") { UseShellExecute = true }));
         }
 
         public async Task InititalizeGrid(Action<GridNode> visitor = null)
@@ -514,65 +514,76 @@ namespace LandingPage.ViewModels.Layout
                         }
                         else
                         {
-                            var plugin = LandingPageExtension.Instance.PlayniteApi.Addons.Plugins.Where(p => p.Id == viewProperties.PluginId).FirstOrDefault();
+                            var plugin = LandingPageExtension.Instance.PlayniteApi.Addons.Plugins.FirstOrDefault(p => p.Id == viewProperties.PluginId);
+                            if (plugin == null && (viewProperties.PluginId == LandingPageExtension.Instance.Id || viewProperties.PluginId == Guid.Empty))
+                            {
+                                plugin = LandingPageExtension.Instance;
+                            }
                             if (plugin is IStartPageExtension extension)
                             {
                                 try
                                 {
-                                    if (LandingPageExtension.Instance.AllAvailableViews.Values.SelectMany(v => v).Where(v => v.PluginId == viewProperties.PluginId && v.ViewId == viewProperties.ViewId).FirstOrDefault() is StartPageViewArgsBase args)
+                                    if (LandingPageExtension.Instance.AllAvailableViews.Count == 0)
                                     {
-                                        IsInitializing = true;
-                                        IsLoading = true;
-                                        viewProperties.StartPageViewArgs = args;
-                                        FrameworkElement view = null;
-                                        if (extension.GetStartPageView(viewProperties.ViewId, viewProperties.InstanceId) is object viewObject)
+                                        LandingPageExtension.Instance.UpdateAvailableViews();
+                                    }
+
+                                    var args = LandingPageExtension.Instance.AllAvailableViews.Values
+                                        .SelectMany(v => v)
+                                        .FirstOrDefault(v => (v.PluginId == viewProperties.PluginId || v.PluginId == plugin.Id) && v.ViewId == viewProperties.ViewId);
+
+                                    if (args == null)
+                                    {
+                                        args = new StartPageViewArgs(new StartPageViewArgsBase { ViewId = viewProperties.ViewId, Name = viewProperties.ViewId }, plugin.Id);
+                                    }
+
+                                    IsInitializing = true;
+                                    IsLoading = true;
+                                    viewProperties.StartPageViewArgs = args;
+                                    FrameworkElement view = null;
+                                    if (extension.GetStartPageView(viewProperties.ViewId, viewProperties.InstanceId) is object viewObject)
+                                    {
+                                        if (viewObject is FrameworkElement control2)
                                         {
-                                            if (viewObject is FrameworkElement control2)
+                                            view = control2;
+                                        }
+                                        else if (viewObject is IEnumerable<Game> gameView)
+                                        {
+                                            ShelvesViewModel shelvesViewModel = new ShelvesViewModel(API.Instance, LandingPageExtension.Instance, LandingPageExtension.Instance.SettingsViewModel, viewProperties.InstanceId);
+                                            view = new ShelvesView()
                                             {
-                                                view = control2;
-                                            } else if (viewObject is IEnumerable<Game> gameView)
-                                            {
-                                                ShelvesViewModel shelvesViewModel = new ShelvesViewModel(API.Instance, LandingPageExtension.Instance, LandingPageExtension.Instance.SettingsViewModel, viewProperties.InstanceId);
-                                                view = new ShelvesView()
-                                                {
-                                                    DataContext = shelvesViewModel
-                                                };
-                                            }
-                                            
-                                        }
-                                        if (view is FrameworkElement)
-                                        {
-                                            view.Name = viewProperties.ViewId;
-                                            viewProperties.view = view;
-                                            View.Children.Add(view);
-                                            hasView = true;
-                                        }
-                                        if (view is IStartPageControl startPageControl)
-                                        {
-                                            startPageControl.OnStartPageOpened();
-                                        }
-                                        if (view?.DataContext is IStartPageControl startPageViewModel)
-                                        {
-                                            startPageViewModel.OnStartPageOpened();
-                                        }
-                                        if (view is IAsyncStartPageControl asyncStartPageControl)
-                                        {
-                                            await asyncStartPageControl.InitializeAsync();
-                                            IsInitializing = false;
-                                            await asyncStartPageControl.OnViewShownAsync();
-                                            IsLoading = false;
-                                        }
-                                        if (view?.DataContext is IAsyncStartPageControl asyncStartPageViewModel)
-                                        {
-                                            await asyncStartPageViewModel.InitializeAsync();
-                                            IsInitializing = false;
-                                            await asyncStartPageViewModel.OnViewShownAsync();
-                                            IsLoading = false;
+                                                DataContext = shelvesViewModel
+                                            };
                                         }
                                     }
-                                    else
+                                    if (view is FrameworkElement)
                                     {
-                                        gridNode.ViewProperties = null;
+                                        view.Name = viewProperties.ViewId;
+                                        viewProperties.view = view;
+                                        View.Children.Add(view);
+                                        hasView = true;
+                                    }
+                                    if (view is IStartPageControl startPageControl)
+                                    {
+                                        startPageControl.OnStartPageOpened();
+                                    }
+                                    if (view?.DataContext is IStartPageControl startPageViewModel)
+                                    {
+                                        startPageViewModel.OnStartPageOpened();
+                                    }
+                                    if (view is IAsyncStartPageControl asyncStartPageControl)
+                                    {
+                                        await asyncStartPageControl.InitializeAsync();
+                                        IsInitializing = false;
+                                        await asyncStartPageControl.OnViewShownAsync();
+                                        IsLoading = false;
+                                    }
+                                    if (view?.DataContext is IAsyncStartPageControl asyncStartPageViewModel)
+                                    {
+                                        await asyncStartPageViewModel.InitializeAsync();
+                                        IsInitializing = false;
+                                        await asyncStartPageViewModel.OnViewShownAsync();
+                                        IsLoading = false;
                                     }
                                 }
                                 catch (Exception ex)
@@ -753,32 +764,54 @@ namespace LandingPage.ViewModels.Layout
         {
             var node = GridNode;
             var viewProperties = node?.ViewProperties;
+            if (viewProperties == null) return;
             var hasView = false;
-            var plugin = LandingPageExtension.Instance.PlayniteApi.Addons.Plugins.Where(p => p.Id == viewProperties.PluginId).FirstOrDefault();
+            var plugin = LandingPageExtension.Instance.PlayniteApi.Addons.Plugins.FirstOrDefault(p => p.Id == viewProperties.PluginId);
+            if (plugin == null && (viewProperties.PluginId == LandingPageExtension.Instance.Id || viewProperties.PluginId == Guid.Empty))
+            {
+                plugin = LandingPageExtension.Instance;
+            }
             if (plugin is IStartPageExtension extension)
             {
                 try
                 {
-                    if (LandingPageExtension.Instance.AllAvailableViews.Values.SelectMany(v => v).Where(v => v.PluginId == viewProperties.PluginId && v.ViewId == viewProperties.ViewId).FirstOrDefault() is StartPageViewArgsBase args)
+                    if (LandingPageExtension.Instance.AllAvailableViews.Count == 0)
                     {
+                        LandingPageExtension.Instance.UpdateAvailableViews();
+                    }
 
-                        viewProperties.StartPageViewArgs = args;
-                        FrameworkElement view = null;
-                        if (extension.GetStartPageView(viewProperties.ViewId, viewProperties.InstanceId) is FrameworkElement control2)
+                    var args = LandingPageExtension.Instance.AllAvailableViews.Values
+                        .SelectMany(v => v)
+                        .FirstOrDefault(v => (v.PluginId == viewProperties.PluginId || v.PluginId == plugin.Id) && v.ViewId == viewProperties.ViewId);
+
+                    if (args == null)
+                    {
+                        args = new StartPageViewArgs(new StartPageViewArgsBase { ViewId = viewProperties.ViewId, Name = viewProperties.ViewId }, plugin.Id);
+                    }
+
+                    viewProperties.StartPageViewArgs = args;
+                    FrameworkElement view = null;
+                    if (extension.GetStartPageView(viewProperties.ViewId, viewProperties.InstanceId) is object viewObject)
+                    {
+                        if (viewObject is FrameworkElement control2)
                         {
                             view = control2;
                         }
-                        if (view is FrameworkElement)
+                        else if (viewObject is IEnumerable<Game> gameView)
                         {
-                            view.Name = viewProperties.ViewId;
-                            viewProperties.view = view;
-                            View.Children.Add(view);
-                            hasView = true;
+                            ShelvesViewModel shelvesViewModel = new ShelvesViewModel(API.Instance, LandingPageExtension.Instance, LandingPageExtension.Instance.SettingsViewModel, viewProperties.InstanceId);
+                            view = new ShelvesView()
+                            {
+                                DataContext = shelvesViewModel
+                            };
                         }
                     }
-                    else
+                    if (view is FrameworkElement)
                     {
-                        gridNode.ViewProperties = null;
+                        view.Name = viewProperties.ViewId;
+                        viewProperties.view = view;
+                        View.Children.Add(view);
+                        hasView = true;
                     }
                     HasView = hasView;
                     IsLeaf = node.Children.Count == 0;

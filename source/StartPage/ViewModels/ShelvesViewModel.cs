@@ -1,4 +1,4 @@
-﻿using PlayniteCommon.Extensions;
+using PlayniteCommon.Extensions;
 using LandingPage.Models;
 using Playnite.SDK;
 using Playnite.SDK.Models;
@@ -122,6 +122,7 @@ namespace LandingPage.ViewModels
                 Shelves.ShelveProperties.Add(item.ShelveProperties);
                 ShelveViewModels.Add(item);
                 await UpdateShelvesAsync();
+                plugin?.SavePluginSettings(settings.Settings);
             });
 
             RemoveShelveCommand = new RelayCommand<ShelveViewModel>(async svm =>
@@ -131,6 +132,7 @@ namespace LandingPage.ViewModels
                     Shelves.ShelveProperties.Remove(svm.ShelveProperties);
                     ShelveViewModels.Remove(svm);
                     await UpdateShelvesAsync();
+                    plugin?.SavePluginSettings(settings.Settings);
                 }
             });
 
@@ -147,6 +149,7 @@ namespace LandingPage.ViewModels
                     Shelves.ShelveProperties.Insert(idx + 1, item.ShelveProperties);
                     ShelveViewModels.Insert(idx + 1, item);
                     await UpdateShelvesAsync();
+                    plugin?.SavePluginSettings(settings.Settings);
                 }
             });
             MoveShelveUpCommand = new RelayCommand<ShelveViewModel>(async svm =>
@@ -156,8 +159,9 @@ namespace LandingPage.ViewModels
                 {
                     ShelveViewModels.Move(idx, idx - 1);
                     Shelves.ShelveProperties.Move(idx, idx - 1);
+                    await UpdateShelvesAsync();
+                    plugin?.SavePluginSettings(settings.Settings);
                 }
-                await UpdateShelvesAsync();
             }, svm => ShelveViewModels.IndexOf(svm) > 0);
 
             MoveShelveDownCommand = new RelayCommand<ShelveViewModel>(async svm =>
@@ -167,8 +171,9 @@ namespace LandingPage.ViewModels
                 {
                     ShelveViewModels.Move(idx, idx + 1);
                     Shelves.ShelveProperties.Move(idx, idx + 1);
+                    await UpdateShelvesAsync();
+                    plugin?.SavePluginSettings(settings.Settings);
                 }
-                await UpdateShelvesAsync();
             }, svm => ShelveViewModels.IndexOf(svm) < ShelveViewModels.Count - 1);
         }
 
@@ -182,9 +187,6 @@ namespace LandingPage.ViewModels
                     shelve.UpdateGames(shelve.ShelveProperties);
                 }
                 IsBusy = false;
-                GC.Collect();
-                GC.Collect(1);
-                GC.Collect(2);
             });
         }
 
@@ -196,9 +198,6 @@ namespace LandingPage.ViewModels
                  await shelve.UpdateGamesAsync(shelve.ShelveProperties);
             }
             IsBusy = false;
-            GC.Collect();
-            GC.Collect(1);
-            GC.Collect(2);
         }
 
         private async void Games_ItemUpdatedAsync(object sender, ItemUpdatedEventArgs<Game> e)
@@ -260,14 +259,20 @@ namespace LandingPage.ViewModels
         {
             playniteAPI.Database.Games.ItemUpdated += Games_ItemUpdatedAsync;
             playniteAPI.Database.Games.ItemCollectionChanged += Games_ItemCollectionChanged;
-            Application.Current.MainWindow.Deactivated += MainWindow_Deactivated;
+            if (Application.Current.MainWindow != null)
+            {
+                Application.Current.MainWindow.Deactivated += MainWindow_Deactivated;
+            }
         }
 
         public void Unsubscribe()
         {
             playniteAPI.Database.Games.ItemUpdated -= Games_ItemUpdatedAsync;
             playniteAPI.Database.Games.ItemCollectionChanged -= Games_ItemCollectionChanged;
-            Application.Current.MainWindow.Deactivated -= MainWindow_Deactivated;
+            if (Application.Current.MainWindow != null)
+            {
+                Application.Current.MainWindow.Deactivated -= MainWindow_Deactivated;
+            }
         }
 
         public void UnsubscribeSettings()
@@ -297,10 +302,10 @@ namespace LandingPage.ViewModels
                 if (Settings.Settings.ShelveInstanceSettings.ContainsKey(InstanceId))
                 {
                     Shelves = Settings.Settings.ShelveInstanceSettings[InstanceId];
-                    for (int i = 0; i < Shelves.ShelveProperties.Count; ++i)
+                    ShelveViewModels.Clear();
+                    foreach (var shelveProperties in Shelves.ShelveProperties)
                     {
-                        ShelveViewModels[i].ShelveProperties = Shelves.ShelveProperties[i];
-                        ShelveViewModels[i].ShelveSettings = Shelves;
+                        ShelveViewModels.Add(new ShelveViewModel(shelveProperties, Shelves, playniteAPI, ShelveViewModels) { ParentViewModel = this });
                     }
                     await UpdateShelvesAsync();
                 } else

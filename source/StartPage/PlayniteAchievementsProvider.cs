@@ -1,4 +1,4 @@
-﻿using LandingPage.Models;
+using LandingPage.Models;
 using LandingPage.Models.SuccessStory;
 using Playnite.SDK;
 using Playnite.SDK.Data;
@@ -23,15 +23,28 @@ namespace LandingPage
 
         public PlayniteAchievementsProvider(IPlayniteAPI playniteAPI)
         {
-            _libraryPath = Path.Combine(
-                playniteAPI.Paths.ExtensionsDataPath,
-                "e6aad2c9-6e06-4d8d-ac55-ac3b252b5f7b",
-                "achievement_cache.db");
-
             _playniteAPI = playniteAPI;
-            _fileWatcher = new FileSystemWatcher(Path.GetDirectoryName(_libraryPath), "*.log");
-            _fileWatcher.Changed += _fileWatcher_Changed;
-            _fileWatcher.EnableRaisingEvents = true;
+            _libraryPath = FindAchievementCachePath(playniteAPI.Paths.ExtensionsDataPath)
+                ?? Path.Combine(
+                    playniteAPI.Paths.ExtensionsDataPath,
+                    "e6aad2c9-6e06-4d8d-ac55-ac3b252b5f7b",
+                    "achievement_cache.db");
+
+            var directory = Path.GetDirectoryName(_libraryPath);
+            if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory))
+            {
+                try
+                {
+                    _fileWatcher = new FileSystemWatcher(directory, "*achievement_cache*");
+                    _fileWatcher.Changed += _fileWatcher_Changed;
+                    _fileWatcher.Created += _fileWatcher_Changed;
+                    _fileWatcher.EnableRaisingEvents = true;
+                }
+                catch (Exception ex)
+                {
+                    LandingPageExtension.logger.Warn(ex, "Failed to initialize FileSystemWatcher in PlayniteAchievementsProvider");
+                }
+            }
             _timer = new System.Timers.Timer(TimeSpan.FromSeconds(4).TotalMilliseconds) { AutoReset = false };
             _timer.Elapsed += _timer_Elapsed;
         }
@@ -141,6 +154,11 @@ LIMIT @limit OFFSET @offset
             var iconBasePath = Path.Combine(
                 _playniteAPI.Paths.ExtensionsDataPath,
                 "e6aad2c9-6e06-4d8d-ac55-ac3b252b5f7b");
+            if (!File.Exists(_libraryPath))
+            {
+                return results;
+            }
+
             using (var db = new SQLiteDatabase(_libraryPath, SQLiteOpenOptions.SQLITE_OPEN_READONLY))
             {
                 try
@@ -188,7 +206,7 @@ LIMIT @limit OFFSET @offset
                 }
                 catch (Exception ex)
                 {
-                    _ = ex;
+                    LandingPageExtension.logger.Error(ex, "Failed to load achievements from PlayniteAchievements database");
                 }
             }
             return results;
@@ -196,9 +214,44 @@ LIMIT @limit OFFSET @offset
 
         public void Dispose()
         {
-            _fileWatcher.Changed -= _fileWatcher_Changed;
-            ((IDisposable)_fileWatcher)?.Dispose();
+            if (_fileWatcher != null)
+            {
+                _fileWatcher.Changed -= _fileWatcher_Changed;
+                _fileWatcher.Dispose();
+                _fileWatcher = null;
+            }
             _timer?.Dispose();
+        }
+
+        internal static string FindAchievementCachePath(string extensionsDataPath)
+        {
+            if (string.IsNullOrWhiteSpace(extensionsDataPath) || !Directory.Exists(extensionsDataPath))
+            {
+                return null;
+            }
+
+            try
+            {
+                var defaultPath = Path.Combine(extensionsDataPath, "e6aad2c9-6e06-4d8d-ac55-ac3b252b5f7b", "achievement_cache.db");
+                if (File.Exists(defaultPath))
+                {
+                    return defaultPath;
+                }
+
+                var candidates = Directory.EnumerateFiles(extensionsDataPath, "achievement_cache.db", SearchOption.AllDirectories)
+                    .ToList();
+
+                if (candidates.Count == 0)
+                {
+                    return null;
+                }
+
+                return candidates.OrderByDescending(File.GetLastWriteTimeUtc).FirstOrDefault();
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 

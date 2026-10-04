@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -25,7 +25,20 @@ namespace LandingPage.Views
             InitializeComponent();
 
             ClockTextBlock.Loaded += ClockTextBlock_Loaded;
+            Unloaded += ClockView_Unloaded;
+        }
 
+        private void ClockView_Unloaded(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
+            var clockProp = DataContext?.GetType().GetProperty("Clock");
+            if (clockProp?.GetValue(DataContext) is IDisposable clockDisposable)
+            {
+                clockDisposable.Dispose();
+            }
         }
 
         private void ClockTextBlock_Loaded(object sender, RoutedEventArgs e)

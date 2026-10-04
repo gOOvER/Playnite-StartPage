@@ -1,4 +1,4 @@
-﻿using Playnite.SDK;
+using Playnite.SDK;
 using Playnite.SDK.Models;
 using System;
 using System.Collections.Generic;
@@ -23,7 +23,7 @@ namespace LandingPage.Converters
             if (value is ScoreGroup scoreGroup)
             {
                 var score = scoreGroup == ScoreGroup.None ? 0 : (int)scoreGroup + 1;
-                var text = new TextBlock() { FontFamily = new FontFamily(new Uri("pack://application:,,,/StartPagePlugin;component/StarRating.ttf"), "./#StarRating"), Margin = new System.Windows.Thickness(2) };
+                var text = new TextBlock() { FontFamily = ResourceProvider.GetResource<FontFamily>("FontIcoFont") ?? new FontFamily("Segoe UI Symbol"), Margin = new System.Windows.Thickness(2) };
                 const char empty = '\uE9D7';
                 const char half = '\uE9D8';
                 const char full = '\uE9D9';

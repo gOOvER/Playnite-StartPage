@@ -1,4 +1,4 @@
-﻿using LandingPage.ViewModels;
+using LandingPage.ViewModels;
 using LandingPage.Views;
 using Playnite.SDK;
 using Playnite.SDK.Events;
@@ -22,6 +22,7 @@ using Newtonsoft.Json;
 using PlayniteCommon.UI;
 using System.Windows.Data;
 using LandingPage.ViewModels.PlayniteAchievements;
+using System.Windows.Threading;
 
 namespace LandingPage
 {
@@ -210,22 +211,95 @@ namespace LandingPage
             return items;
         }
 
+        public GridNode LoadDefaultLayout()
+        {
+            var candidates = new List<string>
+            {
+                Path.Combine(GetPluginUserDataPath(), "DefaultLayout.json"),
+                Path.Combine(Path.GetDirectoryName(GetType().Assembly.Location), "DefaultLayout.json"),
+                Path.Combine(PlayniteApi.Paths.ConfigurationPath, "Extensions", "goover_StartPageNG_Plugin", "DefaultLayout.json"),
+                Path.Combine(PlayniteApi.Paths.ConfigurationPath, "Extensions", "felixkmh_StartPage_Plugin", "DefaultLayout.json"),
+                Path.Combine(PlayniteApi.Paths.ConfigurationPath, "ExtensionsData", "felixkmh_StartPage_Plugin", "DefaultLayout.json")
+            };
+
+            foreach (var path in candidates)
+            {
+                try
+                {
+                    if (File.Exists(path))
+                    {
+                        var json = File.ReadAllText(path);
+                        if (!string.IsNullOrWhiteSpace(json))
+                        {
+                            var node = JsonConvert.DeserializeObject<GridNode>(json);
+                            if (node != null && node.ViewCount > 0)
+                            {
+                                logger.Info($"Loaded default layout from {path} with {node.ViewCount} views.");
+                                return node;
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.Warn(ex, $"Failed to load layout from candidate path {path}");
+                }
+            }
+
+            return new GridNode { Orientation = Orientation.Vertical };
+        }
+
+        public void UpdateAvailableViews()
+        {
+            try
+            {
+                if (GetAvailableStartPageViews() is StartPageExtensionArgs ourArgs && ourArgs.Views != null && ourArgs.Views.Any())
+                {
+                    AllAvailableViews[ourArgs.ExtensionName] = ourArgs.Views.Select(v => new StartPageViewArgs(v, Id)).ToList();
+                }
+
+                if (PlayniteApi?.Addons?.Plugins != null)
+                {
+                    foreach (var plugin in PlayniteApi.Addons.Plugins)
+                    {
+                        if (plugin is IStartPageExtension extension && plugin != this)
+                        {
+                            try
+                            {
+                                if (extension.GetAvailableStartPageViews() is StartPageExtensionArgs extensionArgs
+                                    && extensionArgs.Views != null
+                                    && extensionArgs.Views.Any())
+                                {
+                                    AllAvailableViews[extensionArgs.ExtensionName] = extensionArgs.Views.Select(v => new StartPageViewArgs(v, plugin.Id)).ToList();
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.Warn(ex, $"Failed to get available views from plugin {plugin.GetType().Name}");
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Failed to update available views.");
+            }
+        }
+
         private Control ViewOpened()
         {
             Task initTask = Task.CompletedTask;
+            if (AllAvailableViews.Count == 0)
+            {
+                UpdateAvailableViews();
+            }
+
             if (startPageView == null)
             {
-                if (Settings.GridLayout == null)
+                if (Settings.GridLayout == null || Settings.GridLayout.ViewCount == 0)
                 {
-                    Settings.GridLayout = new GridNode { Orientation = Orientation.Vertical };
-                    string path = Path.Combine(PlayniteApi.Paths.ConfigurationPath, "Extensions", "felixkmh_StartPage_Plugin", "DefaultLayout.json");
-                    if (File.Exists(path))
-                    {
-                        if (JsonConvert.DeserializeObject<GridNode>(File.ReadAllText(path)) is GridNode node)
-                        {
-                            Settings.GridLayout = node;
-                        }
-                    }
+                    Settings.GridLayout = LoadDefaultLayout();
                 }
 
                 startPageViewModel = new StartPageViewModel(PlayniteApi, this, SettingsViewModel, new GridNodeViewModel(Settings.GridLayout), BackgroundViewModel);
@@ -254,6 +328,19 @@ namespace LandingPage
             }
             else
             {
+                if (Settings.GridLayout == null || Settings.GridLayout.ViewCount == 0)
+                {
+                    Settings.GridLayout = LoadDefaultLayout();
+                    if (startPageViewModel != null)
+                    {
+                        startPageViewModel.RootNodeViewModel.GridNode = Settings.GridLayout;
+                        Application.Current.Dispatcher.BeginInvoke(new Action(async () =>
+                        {
+                            await startPageViewModel.Inititalize();
+                        }), System.Windows.Threading.DispatcherPriority.Background);
+                    }
+                }
+
                 Application.Current.Dispatcher.BeginInvoke(new Action(async () =>
                 {
                     await Task.Delay(100);
@@ -287,8 +374,6 @@ namespace LandingPage
             }
 
             isViewOpen = false;
-
-            GC.Collect();
         }
 
         public override void OnGameSelected(OnGameSelectedEventArgs args)
@@ -429,73 +514,98 @@ namespace LandingPage
                     {
                         try
                         {
-                            if (UiHelper.FindVisualChildren<StackPanel>(mainWindow, "PART_PanelSideBarItems").FirstOrDefault() is StackPanel panel)
+                            StackPanel panel = null;
+                            for (int r = 0; r < 50; r++)
                             {
-                                IEnumerable<FrameworkElement> children = UiHelper.FindVisualChildren(panel);
-                                int retries = 20;
-                                IEnumerable<Button> sideBarButtons = panel.Children.OfType<Button>();
-                                int delay = 50;
-                                while (sideBarButtons.FirstOrDefault(child => child.ToolTip?.ToString() == Settings.StartPage) == null && retries > 0)
+                                panel = UiHelper.FindVisualChildren<StackPanel>(mainWindow, "PART_PanelSideBarItems").FirstOrDefault();
+                                if (panel != null && panel.Children.Count > 0)
+                                    break;
+                                await Task.Delay(100);
+                            }
+
+                            if (panel == null)
+                            {
+                                logger.Debug("PART_PanelSideBarItems could not be found.");
+                                return;
+                            }
+
+                            bool IsStartPageBtn(FrameworkElement fe)
+                            {
+                                if (fe == null) return false;
+                                var tt = fe.ToolTip?.ToString();
+                                if (!string.IsNullOrEmpty(tt))
                                 {
-                                    logger.Debug($"Could not find any side bar items. Waiting {delay}ms and retrying. Remaining retries: {retries}.");
-                                    await Task.Delay(delay);
-                                    sideBarButtons = panel.Children.OfType<Button>();
-                                    retries--;
+                                    var clean = tt.Replace(" ", "").Replace("-", "");
+                                    if (clean.IndexOf("StartPage", StringComparison.OrdinalIgnoreCase) >= 0)
+                                        return true;
                                 }
-                                logger.Debug($"Found side bar items:\n{string.Join("\n", sideBarButtons.Select(a => (a.ToolTip?.ToString())).OfType<string>())}");
-                                if (sideBarButtons.FirstOrDefault(child => child.ToolTip?.ToString() == Settings.StartPage) is Button element)
+                                return UiHelper.FindVisualChildren<TextBlock>(fe).Any(tb => tb.Text == "" || tb.Text == "\uED47");
+                            }
+
+                            FrameworkElement startPageBtn = null;
+                            for (int r = 0; r < 50; r++)
+                            {
+                                startPageBtn = panel.Children.OfType<FrameworkElement>().FirstOrDefault(IsStartPageBtn);
+                                if (startPageBtn != null)
+                                    break;
+                                await Task.Delay(100);
+                            }
+
+                            if (startPageBtn != null)
+                            {
+                                void MoveToTop()
                                 {
-                                    var childIndex = -1;
-                                    if (Settings.MoveToTopOfList)
+                                    var currentIdx = panel.Children.IndexOf(startPageBtn);
+                                    if (currentIdx > 0)
                                     {
-                                        childIndex = panel.Children.Cast<FrameworkElement>().ToList().FindIndex(c => c.ToolTip?.ToString() == "Start Page");
-                                        if (childIndex == -1)
-                                            logger.Debug("Could not find StartPage side bar element.");
+                                        panel.Children.RemoveAt(currentIdx);
+                                        panel.Children.Insert(0, startPageBtn);
                                     }
-
-                                    await panel.Dispatcher.BeginInvoke(new Action(() =>
-                                    {
-                                        if (childIndex > -1)
-                                        {
-                                            var child = panel.Children[childIndex];
-                                            panel.Children.RemoveAt(childIndex);
-                                            panel.Children.Insert(0, child);
-                                        }
-
-                                        if (Settings.EnableStartupOverride)
-                                        {
-                                            if (element.Command.CanExecute(element))
-                                            {
-                                                element.Command.Execute(element);
-                                            }
-                                        }
-                                    }), switchWithLowPrio ? System.Windows.Threading.DispatcherPriority.ApplicationIdle : System.Windows.Threading.DispatcherPriority.DataBind);
                                 }
-                                else
+
+                                if (Settings.MoveToTopOfList)
                                 {
-                                    logger.Debug("Could not find StartPage side bar button.");
+                                    MoveToTop();
+
+                                    // Keep it at the top even if other plugins register their sidebar items late during startup
+                                    var monitorTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+                                    int timerTicks = 0;
+                                    monitorTimer.Tick += (s, e) =>
+                                    {
+                                        timerTicks++;
+                                        if (panel.Children.IndexOf(startPageBtn) > 0)
+                                        {
+                                            MoveToTop();
+                                        }
+                                        if (timerTicks > 20) // Stop monitoring after ~10 seconds
+                                        {
+                                            monitorTimer.Stop();
+                                        }
+                                    };
+                                    monitorTimer.Start();
                                 }
+
+                                if (Settings.EnableStartupOverride)
+                                {
+                                    if (startPageBtn is Button btn && btn.Command != null && btn.Command.CanExecute(btn))
+                                    {
+                                        btn.Command.Execute(btn);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                logger.Debug("Could not find StartPage side bar button.");
                             }
                         }
                         catch (Exception ex)
                         {
-                            logger.Debug(ex, "Failed to move Start Page icon or open StartPage.");
+                            logger.Debug(ex, "Failed to move StartPage icon or open StartPage.");
                         }
                     }), switchWithLowPrio ? System.Windows.Threading.DispatcherPriority.ApplicationIdle : System.Windows.Threading.DispatcherPriority.DataBind);
                 }
             }
-            foreach (var plugin in PlayniteApi.Addons.Plugins)
-            {
-                if (plugin is IStartPageExtension extension)
-                {
-                    if (extension.GetAvailableStartPageViews() is StartPageExtensionArgs extensionArgs
-                        && extensionArgs.Views != null
-                        && extensionArgs.Views.Any())
-                    {
-                        AllAvailableViews.Add(extensionArgs.ExtensionName, extensionArgs.Views.Select(v => new StartPageViewArgs(v, plugin.Id)).ToList());
-                    }
-                }
-            }
+            UpdateAvailableViews();
 
             if (Settings.EnableGlobalBackground)
             {
@@ -633,7 +743,7 @@ namespace LandingPage
 
 
             // collapse layout
-            if (Settings.GridLayout != null)
+            if (Settings.GridLayout != null && Settings.GridLayout.ViewCount > 0)
             {
                 GridNode.Minimize(Settings.GridLayout, null);
             }
@@ -725,7 +835,7 @@ namespace LandingPage
             if (id == "GameShelves")
             {
                 var viewModel = new ShelvesViewModel(PlayniteApi, this, SettingsViewModel, instanceId);
-                shelvesViewModels.Add(instanceId, viewModel);
+                shelvesViewModels[instanceId] = viewModel;
                 return new ShelvesView { DataContext = viewModel };
             }
             if (id == "MostPlayed")
@@ -775,6 +885,10 @@ namespace LandingPage
             }
             if (id == "GameShelves")
             {
+                if (!Settings.ShelveInstanceSettings.ContainsKey(instanceId))
+                {
+                    Settings.ShelveInstanceSettings[instanceId] = new Settings.ShelvesSettings(Settings);
+                }
                 return new Views.Settings.ShelvesSettingsView() { DataContext = new ViewModels.ShelvesSettingsViewModel(SettingsViewModel, Settings.ShelveInstanceSettings[instanceId]) };
             }
             if (id == "RecentAchivements")
@@ -788,9 +902,12 @@ namespace LandingPage
         {
             if (viewId == "GameShelves")
             {
-                shelvesViewModels[instanceId].OnViewClosed();
-                shelvesViewModels.Remove(instanceId);
-                Settings.ShelveInstanceSettings.Remove(instanceId);
+                if (shelvesViewModels.TryGetValue(instanceId, out var vm))
+                {
+                    vm.OnViewClosed();
+                    shelvesViewModels.Remove(instanceId);
+                }
+                Settings.ShelveInstanceSettings?.Remove(instanceId);
             }
             if (viewId == "MostPlayed")
             {
@@ -801,9 +918,6 @@ namespace LandingPage
             {
 
             }
-            GC.Collect();
-            GC.Collect(1);
-            GC.Collect(2);
         }
     }
 }

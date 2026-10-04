@@ -1,190 +1,52 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{4FDF1E89-5BC3-4C72-8FDA-0D580E7A5D5F}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>LandingPage</RootNamespace>
     <AssemblyName>StartPagePlugin</AssemblyName>
-    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
+    <TargetFramework>net462</TargetFramework>
+    <UseWpf>true</UseWpf>
     <Deterministic>true</Deterministic>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <!-- Suppress NuGet audit warning for Newtonsoft.Json 10.0.3 which is required by Playnite runtime host -->
+    <NoWarn>$(NoWarn);NU1903</NoWarn>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+
+  <!-- Localization files must be Content (copied to output), not compiled XAML Pages -->
   <ItemGroup>
-    <Reference Include="PresentationCore" />
-    <Reference Include="PresentationFramework" />
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Xaml" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Net.Http" />
-    <Reference Include="System.Xml" />
-    <Reference Include="UIAutomationProvider" />
-    <Reference Include="WindowsBase" />
+    <Page Remove="Localization\**" />
+    <Content Include="Localization\*.xaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
+
+  <!-- Embedded Resources for controls and rating -->
   <ItemGroup>
-    <Compile Include="BusyObservableObject.cs" />
-    <Compile Include="Controls\GroupListBox.xaml.cs">
-      <DependentUpon>GroupListBox.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Controls\RevealControl.xaml.cs">
-      <DependentUpon>RevealControl.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Controls\SidewaysTextBlock.xaml.cs">
-      <DependentUpon>SidewaysTextBlock.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Controls\TrailerPlayer.xaml.cs">
-      <DependentUpon>TrailerPlayer.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Converters\AchievementsToProgressConverter.cs" />
-    <Compile Include="Converters\AchievementToImageConverter.cs" />
-    <Compile Include="Converters\ActualHeightToWidthConverter.cs" />
-    <Compile Include="Converters\BoolToGridLengthConverter.cs" />
-    <Compile Include="Converters\DatabaseIdToUriConverter.cs" />
-    <Compile Include="Converters\DoubleToGridLengthConverter.cs" />
-    <Compile Include="Converters\DoubleToNegativeTopMarginConverter.cs" />
-    <Compile Include="Converters\ElementToScaledRectConverter.cs" />
-    <Compile Include="Converters\EnumDescriptionTypeConverter.cs" />
-    <Compile Include="Converters\IEnumerableNullOrEmptyToVisibilityConverter.cs" />
-    <Compile Include="Converters\LogConverter.cs" />
-    <Compile Include="Converters\MultiplyConverter.cs" />
-    <Compile Include="Converters\NullToHiddenConverter.cs" />
-    <Compile Include="Converters\ObjectToGroupHeaderConverter.cs" />
-    <Compile Include="Converters\OneMinusConverter.cs" />
-    <Compile Include="Converters\ThicknessToDoubleConverter.cs" />
-    <Compile Include="Converters\UriToBitmapImageConverter.cs" />
-    <Compile Include="Converters\VisibilityInverter.cs" />
-    <Compile Include="IAchievementsProvider.cs" />
-    <Compile Include="IStartPageViewModel.cs" />
-    <Compile Include="LandingPageExtension.cs" />
-    <Compile Include="LandingPageSettings.cs" />
-    <Compile Include="LandingPageSettingsView.xaml.cs">
-      <DependentUpon>LandingPageSettingsView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Markup\LandingPageSettings.cs" />
-    <Compile Include="Models\Clock.cs" />
-    <Compile Include="Models\GameActivity\GameActivity.cs" />
-    <Compile Include="Models\GameActivity\MostPlayedOptions.cs" />
-    <Compile Include="Models\GameActivity\PlayTimePerSource.cs" />
-    <Compile Include="Models\GameFilters\CategoryFilter.cs" />
-    <Compile Include="Models\GameFilters\CompletionFilter.cs" />
-    <Compile Include="Models\GameFilters\GenreFilter.cs" />
-    <Compile Include="Models\GameFilters\IFilter.cs" />
-    <Compile Include="Models\GameFilters\ScoreFilter.cs" />
-    <Compile Include="Models\GameFilters\TagFilter.cs" />
-    <Compile Include="Models\GameGroup.cs" />
-    <Compile Include="Models\GameModel.cs" />
-    <Compile Include="Models\IAchievement.cs" />
-    <Compile Include="Models\IGameAchievementsInfo.cs" />
-    <Compile Include="Models\LandingPage.cs" />
-    <Compile Include="Models\Layout\GridNodePreset.cs" />
-    <Compile Include="Models\Layout\ViewProperties.cs" />
-    <Compile Include="Models\Layout\GridNode.cs" />
-    <Compile Include="Models\Objects\LoadingStatus.cs" />
-    <Compile Include="Models\Objects\ViewModelCollection.cs" />
-    <Compile Include="Models\ObservableObject.cs" />
-    <Compile Include="Models\ShelveProperties.cs" />
-    <Compile Include="Models\SuccessStory\Achievements.cs" />
-    <Compile Include="Models\SuccessStory\GameAchievements.cs" />
-    <Compile Include="ObservableObjectExt.cs" />
-    <Compile Include="PlayniteAchievementsProvider.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ScrollViewerHelper.cs" />
-    <Compile Include="Settings\AchievementsProvider.cs" />
-    <Compile Include="Settings\ShelvesSettings.cs" />
-    <Compile Include="Utils\PopupHelper.cs" />
-    <Compile Include="ViewModels\AchievementsSettingsViewModel.cs" />
-    <Compile Include="ViewModels\BackgroundViewModel.cs" />
-    <Compile Include="ViewModels\GameActivity\GameActivityViewModel.cs" />
-    <Compile Include="ViewModels\GameActivity\MostPlayedViewModel.cs" />
-    <Compile Include="ViewModels\GridNodePresetsViewModel.cs" />
-    <Compile Include="ViewModels\LandingPageViewModel.cs" />
-    <Compile Include="ViewModels\Layout\GridNodeViewModel.cs" />
-    <Compile Include="ViewModels\PlayniteAchievements\PlayniteAchievementsViewModel.cs" />
-    <Compile Include="ViewModels\RecentAchievementsViewModel.cs" />
-    <Compile Include="ViewModels\ShelvesSettingsViewModel.cs" />
-    <Compile Include="ViewModels\ShelvesViewModel.cs" />
-    <Compile Include="ViewModels\ShelveViewModel.cs" />
-    <Compile Include="ViewModels\StartPageViewModel.cs" />
-    <Compile Include="ViewModels\SuccessStory\SuccessStoryViewModel.cs" />
-    <Compile Include="Views\BackgroundView.xaml.cs">
-      <DependentUpon>BackgroundView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\ClockView.xaml.cs">
-      <DependentUpon>ClockView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\GameActivityView.xaml.cs">
-      <DependentUpon>GameActivityView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\GameCover.xaml.cs">
-      <DependentUpon>GameCover.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\GameDetailsPopup.xaml.cs">
-      <DependentUpon>GameDetailsPopup.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\GameDetailsView.xaml.cs">
-      <DependentUpon>GameDetailsView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\GridNodePresetsView.xaml.cs">
-      <DependentUpon>GridNodePresetsView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\GridNodeView.xaml.cs">
-      <DependentUpon>GridNodeView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\LandingPageView.xaml.cs">
-      <DependentUpon>LandingPageView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\LoadingView.xaml.cs">
-      <DependentUpon>LoadingView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\MostPlayedView.xaml.cs">
-      <DependentUpon>MostPlayedView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\RecentAchievementsView.xaml.cs">
-      <DependentUpon>RecentAchievementsView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\Settings\AchievementsSettingsView.xaml.cs">
-      <DependentUpon>AchievementsSettingsView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\Settings\MostPlayedSettingsView.xaml.cs">
-      <DependentUpon>MostPlayedSettingsView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\Settings\ShelvesSettingsView.xaml.cs">
-      <DependentUpon>ShelvesSettingsView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\ShelvesView.xaml.cs">
-      <DependentUpon>ShelvesView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\ShelveView.xaml.cs">
-      <DependentUpon>ShelveView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\StartPageView.xaml.cs">
-      <DependentUpon>StartPageView.xaml</DependentUpon>
-    </Compile>
+    <Resource Include="transparent_noise.png" />
+    <Resource Include="white_noise.png" />
+    <Resource Include="noise.png" />
+    <Resource Include="innerglow.png" />
+    <Resource Include="dark_noise.png" />
+    <Resource Include="empty.png" />
+    <Resource Include="star.png" />
   </ItemGroup>
+
+  <!-- Files copied to output directory -->
   <ItemGroup>
     <Content Include="DefaultLayout.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -195,239 +57,31 @@
     <None Include="extension.yaml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <Resource Include="StarRating.ttf" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="transparent_noise.png" />
-    <Resource Include="white_noise.png" />
-    <Resource Include="noise.png" />
-    <Resource Include="innerglow.png" />
-    <Resource Include="dark_noise.png" />
-    <Resource Include="empty.png" />
-    <Content Include="Localization\af_ZA.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\ar_SA.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\ca_ES.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\cs_CZ.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\da_DK.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\de_DE.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\el_GR.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\en_US.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\es_ES.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\fi_FI.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\fr_FR.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\he_IL.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\hu_HU.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\it_IT.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\ja_JP.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\ko_KR.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\nl_NL.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\no_NO.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\pl_PL.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\pt_BR.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\pt_PT.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\ro_RO.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\ru_RU.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\sr_SP.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\sv_SE.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\tr_TR.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\uk_UA.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\vi_VN.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\zh_CN.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Localization\zh_TW.xaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Resource Include="star.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Page Include="Controls\GroupListBox.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Controls\RevealControl.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Controls\SidewaysTextBlock.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Controls\TrailerPlayer.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="LandingPageSettingsView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\BackgroundView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\ClockView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\GameActivityView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\GameCover.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\GameDetailsPopup.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\GameDetailsView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\GridNodePresetsView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\GridNodeView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\LandingPageView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\LoadingView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\MostPlayedView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\RecentAchievementsView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\Settings\AchievementsSettingsView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\Settings\MostPlayedSettingsView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\Settings\ShelvesSettingsView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\ShelvesView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\ShelveView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\StartPageView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="icon.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+
+  <!-- Project References -->
   <ItemGroup>
-    <ProjectReference Include="..\..\extern\PlayniteCommon\PlayniteCommon.csproj">
-      <Project>{426461dc-3089-4ec5-99a2-a55733ed33fe}</Project>
-      <Name>PlayniteCommon</Name>
-    </ProjectReference>
+    <ProjectReference Include="..\..\extern\PlayniteCommon\PlayniteCommon.csproj" />
+    <ProjectReference Include="..\StartPage.SDK\StartPage.SDK.csproj" />
+    <ProjectReference Include="..\StartPage.SDK.Async\StartPage.SDK.Async.csproj" />
   </ItemGroup>
+
+  <!-- NuGet packages -->
   <ItemGroup>
-    <PackageReference Include="Gu.Wpf.NumericInput">
-      <Version>0.5.5</Version>
+    <PackageReference Include="Gu.Wpf.NumericInput" Version="0.5.5" />
+    <PackageReference Include="Newtonsoft.Json" Version="10.0.3">
+      <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection">
-      <Version>6.0.0</Version>
+    <PackageReference Include="PlayniteSDK" Version="6.18.0">
+      <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
-    <PackageReference Include="Newtonsoft.Json">
-      <Version>10.0.3</Version>
-    </PackageReference>
-    <PackageReference Include="PlayniteSDK">
-      <Version>6.1.0</Version>
-    </PackageReference>
-    <PackageReference Include="SqlNado">
-      <Version>2.1.0</Version>
-    </PackageReference>
-    <PackageReference Include="StartPage.SDK">
-      <Version>1.0.0</Version>
-    </PackageReference>
-    <PackageReference Include="StartPage.SDK.Async">
-      <Version>1.0.0</Version>
-    </PackageReference>
+    <PackageReference Include="SqlNado" Version="2.1.0" />
   </ItemGroup>
-  <ItemGroup />
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <PropertyGroup>
-    <PostBuildEvent>del /q $(ProjectDir)$(OutDir)*.xml
-%25LOCALAPPDATA%25\Playnite\Toolbox.exe pack  $(ProjectDir)$(OutDir) $(ProjectDir)bin</PostBuildEvent>
-  </PropertyGroup>
+
+  <Target Name="PackOnRelease" AfterTargets="Build" Condition="'$(Configuration)' == 'Release' and Exists('$(LOCALAPPDATA)\Playnite\Toolbox.exe')">
+    <Exec Command="&quot;$(LOCALAPPDATA)\Playnite\Toolbox.exe&quot; pack &quot;$(TargetDir.TrimEnd('\'))&quot; &quot;$(ProjectDir)bin&quot;" />
+  </Target>
 </Project>

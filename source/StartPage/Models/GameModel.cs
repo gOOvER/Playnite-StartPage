@@ -1,4 +1,4 @@
-﻿using LandingPage.Converters;
+using LandingPage.Converters;
 using Playnite.SDK;
 using Playnite.SDK.Models;
 using System;
@@ -27,25 +27,25 @@ namespace LandingPage.Models
             {
                 try
                 {
-                    if (game is Game && LandingPageExtension.Instance.PlayniteApi.Database.Games.Get(Game.Id) is Game)
+                    if (Game is Game g && LandingPageExtension.Instance?.PlayniteApi?.Database?.Games?.Get(g.Id) is Game)
                     {
                         LandingPageExtension.Instance.PlayniteApi.MainView.SwitchToLibraryView();
-                        LandingPageExtension.Instance.PlayniteApi.MainView.SelectGame(Game.Id);
+                        LandingPageExtension.Instance.PlayniteApi.MainView.SelectGame(g.Id);
                     }
                 }
                 catch (Exception ex)
                 {
-                    LandingPageExtension.logger.Error(ex, $"Error when switching to library view to select game: {Game.Name} (ID: {Game.Id})");
+                    LandingPageExtension.logger.Error(ex, $"Error when switching to library view to select game: {Game?.Name} (ID: {Game?.Id})");
                 }
             });
             StartCommand = new RelayCommand(() =>
             {
-                if (game is Game && LandingPageExtension.Instance.PlayniteApi.Database.Games.Get(Game.Id) is Game)
+                if (Game is Game g && LandingPageExtension.Instance?.PlayniteApi?.Database?.Games?.Get(g.Id) is Game)
                 {
                     Application.Current.Dispatcher.BeginInvoke(
                         System.Windows.Threading.DispatcherPriority.Background,
                         (Action<Guid>)LandingPageExtension.Instance.PlayniteApi.StartGame,
-                        Game.Id);
+                        g.Id);
                 }
             });
         }
@@ -59,6 +59,10 @@ namespace LandingPage.Models
                 if (value != game) 
                 {
                     SetValue(ref game, value);
+                    _logoUriChecked = false;
+                    _logoUri = null;
+                    _trailerUriChecked = false;
+                    _trailerUri = null;
                     OnPropertyChanged(nameof(CoverImagePath));
                     OnPropertyChanged(nameof(LogoUri));
                     OnPropertyChanged(nameof(SortingName));
@@ -67,47 +71,74 @@ namespace LandingPage.Models
             }
         }
 
-        public string CoverImagePath => LandingPageExtension.Instance.PlayniteApi.Database.GetFullFilePath(Game.CoverImage);
+        public string CoverImagePath => Game?.CoverImage != null ? LandingPageExtension.Instance?.PlayniteApi?.Database?.GetFullFilePath(Game.CoverImage) : null;
 
+        private Uri _logoUri;
+        private bool _logoUriChecked = false;
         public Uri LogoUri
         {
             get
             {
-                var metadataPath = Path.Combine(LandingPageExtension.Instance.PlayniteApi.Paths.ConfigurationPath, "ExtraMetadata", "games", game.Id.ToString());
-                if (Directory.Exists(metadataPath))
+                if (!_logoUriChecked)
                 {
-                    var logoPath = Path.Combine(metadataPath, "Logo.png");
-                    if (File.Exists(logoPath) && Uri.TryCreate(logoPath, UriKind.RelativeOrAbsolute, out var uri))
+                    _logoUriChecked = true;
+                    if (game != null && LandingPageExtension.Instance?.PlayniteApi?.Paths?.ConfigurationPath is string configPath)
                     {
-                        return uri;
+                        var logoPath = Path.Combine(configPath, "ExtraMetadata", "games", game.Id.ToString(), "Logo.png");
+                        if (File.Exists(logoPath) && Uri.TryCreate(logoPath, UriKind.RelativeOrAbsolute, out var uri))
+                        {
+                            _logoUri = uri;
+                        }
                     }
                 }
-                return null;
+                return _logoUri;
             }
         }
 
+        private Uri _trailerUri;
+        private bool _trailerUriChecked = false;
         public Uri TrailerUri 
         { 
             get 
             {
-                var playniteApi = LandingPageExtension.Instance.PlayniteApi;
-                var dir = System.IO.Path.Combine(playniteApi.Paths.ConfigurationPath, "ExtraMetadata", "games", Game.Id.ToString());
-                var trailerPath = System.IO.Path.Combine(dir, "VideoTrailer.mp4");
-                if (System.IO.File.Exists(trailerPath))
+                if (!_trailerUriChecked)
                 {
-                    return new Uri(trailerPath);
+                    _trailerUriChecked = true;
+                    if (game != null && LandingPageExtension.Instance?.PlayniteApi?.Paths?.ConfigurationPath is string configPath)
+                    {
+                        var dir = Path.Combine(configPath, "ExtraMetadata", "games", game.Id.ToString());
+                        var trailerPath = Path.Combine(dir, "VideoTrailer.mp4");
+                        if (File.Exists(trailerPath) && Uri.TryCreate(trailerPath, UriKind.RelativeOrAbsolute, out var uri))
+                        {
+                            _trailerUri = uri;
+                        }
+                        else
+                        {
+                            var microTrailerPath = Path.Combine(dir, "VideoMicrotrailer.mp4");
+                            if (File.Exists(microTrailerPath) && Uri.TryCreate(microTrailerPath, UriKind.RelativeOrAbsolute, out var microUri))
+                            {
+                                _trailerUri = microUri;
+                            }
+                        }
+                    }
                 }
-                var microTrailerPath = System.IO.Path.Combine(dir, "VideoMicrotrailer.mp4");
-                if (System.IO.File.Exists(microTrailerPath))
-                {
-                    return new Uri(microTrailerPath);
-                }
-                return null;
+                return _trailerUri;
             } 
         }
 
         public string SortingName => string.IsNullOrEmpty(Game?.SortingName) ? Game?.Name : Game?.SortingName;
         public GameSource Source => Game?.Source ?? DefaultGameSource;
+
+        public string CategoryGroup
+        {
+            get
+            {
+                var firstId = Game?.CategoryIds?.FirstOrDefault();
+                if (firstId == null || firstId == Guid.Empty)
+                    return "[None]";
+                return LandingPageExtension.Instance?.PlayniteApi?.Database?.Categories?.Get(firstId.Value)?.Name ?? "[None]";
+            }
+        }
 
         public ICommand OpenCommand { get; private set; }
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -102,6 +102,7 @@ namespace LandingPage.ViewModels.SuccessStory
             if (e.PropertyName == "Settings" && sender is LandingPageSettingsViewModel settingsViewModel)
             {
                 await UpdateLatestAchievementsAsync(settingsViewModel.Settings.MaxNumberRecentAchievements, settingsViewModel.Settings.MaxNumberRecentAchievementsPerGame);
+                settingsViewModel.Settings.PropertyChanged -= Settings_PropertyChangedAsync;
                 settingsViewModel.Settings.PropertyChanged += Settings_PropertyChangedAsync;
             }
         }
@@ -395,7 +396,10 @@ namespace LandingPage.ViewModels.SuccessStory
 
         public Task OnViewHiddenAsync()
         {
-            achievementWatcher.EnableRaisingEvents = false;
+            if (achievementWatcher != null)
+            {
+                achievementWatcher.EnableRaisingEvents = false;
+            }
             landingPageSettingsViewModel.PropertyChanged -= LandingPageSettings_PropertyChangedAsync;
             landingPageSettingsViewModel.Settings.PropertyChanged -= Settings_PropertyChangedAsync;
             return Task.CompletedTask;
@@ -404,8 +408,13 @@ namespace LandingPage.ViewModels.SuccessStory
         public async Task OnViewShownAsync()
         {
             await UpdateAsync();
-            achievementWatcher.EnableRaisingEvents = true;
+            if (achievementWatcher != null)
+            {
+                achievementWatcher.EnableRaisingEvents = true;
+            }
+            landingPageSettingsViewModel.PropertyChanged -= LandingPageSettings_PropertyChangedAsync;
             landingPageSettingsViewModel.PropertyChanged += LandingPageSettings_PropertyChangedAsync;
+            landingPageSettingsViewModel.Settings.PropertyChanged -= Settings_PropertyChangedAsync;
             landingPageSettingsViewModel.Settings.PropertyChanged += Settings_PropertyChangedAsync;
         }
 
@@ -421,10 +430,14 @@ namespace LandingPage.ViewModels.SuccessStory
 
         public void OnViewClosed()
         {
-            achievementWatcher.EnableRaisingEvents = false;
+            if (achievementWatcher != null)
+            {
+                achievementWatcher.EnableRaisingEvents = false;
+                achievementWatcher.Dispose();
+                achievementWatcher = null;
+            }
             landingPageSettingsViewModel.PropertyChanged -= LandingPageSettings_PropertyChangedAsync;
             landingPageSettingsViewModel.Settings.PropertyChanged -= Settings_PropertyChangedAsync;
-            achievementWatcher.Dispose();
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="LandingPage.Views.RecentAchievementsView"
+<UserControl x:Class="LandingPage.Views.RecentAchievementsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -151,7 +151,7 @@
                                        VerticalAlignment="Center" 
                                        RenderOptions.BitmapScalingMode="Fant">
                                     <Image.Source>
-                                        <BitmapImage UriSource="{Binding Icon, FallbackValue={StaticResource DefaultAchievementUri}}" 
+                                        <BitmapImage UriSource="{Binding Icon, TargetNullValue={StaticResource DefaultAchievementUri}, FallbackValue={StaticResource DefaultAchievementUri}}" 
                                                     CreateOptions="IgnoreColorProfile" 
                                                     CacheOption="OnLoad"
                                                     DecodePixelHeight="64"/>

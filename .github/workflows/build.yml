@@ -1,0 +1,67 @@
+name: CI Build & Package
+
+on:
+  push:
+    branches: [ "master", "main" ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+  pull_request:
+    branches: [ "master", "main" ]
+
+jobs:
+  build:
+    name: Build & Package (.pext)
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore source/StartPage/StartPage.csproj
+
+    - name: Build Project (Release)
+      run: dotnet build source/StartPage/StartPage.csproj -c Release --no-restore -p:DebugType=none -p:DebugSymbols=false
+
+    - name: Package Playnite Extension (.pext)
+      id: package
+      shell: pwsh
+      run: |
+        $outDir = "source/StartPage/bin/Release/net462"
+        if (-not (Test-Path $outDir)) {
+          Write-Error "Build output directory not found: $outDir"
+          exit 1
+        }
+
+        # Read addon ID and version from extension.yaml
+        $yamlContent = Get-Content (Join-Path $outDir "extension.yaml") -Raw
+        $addonId = if ($yamlContent -match '(?m)^Id:\s*([^\r\n]+)') { $Matches[1].Trim() } else { "goover_StartPageNG_Plugin" }
+        $version = if ($yamlContent -match '(?m)^Version:\s*([^\r\n]+)') { $Matches[1].Trim() } else { "1.0.0" }
+        $versionTag = $version -replace '\.', '_'
+
+        $pextName = "${addonId}_${versionTag}.pext"
+        $binDir = "source/StartPage/bin"
+        if (-not (Test-Path $binDir)) { New-Item -ItemType Directory -Path $binDir -Force }
+        $pextPath = Join-Path $binDir $pextName
+
+        Write-Host "Creating extension package: $pextName"
+        Compress-Archive -Path "$outDir\*" -DestinationPath $pextPath -Force
+
+        echo "pext_name=$pextName" >> $env:GITHUB_OUTPUT
+        echo "pext_path=$pextPath" >> $env:GITHUB_OUTPUT
+
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.package.outputs.pext_name }}
+        path: ${{ steps.package.outputs.pext_path }}
+        if-no-files-found: error

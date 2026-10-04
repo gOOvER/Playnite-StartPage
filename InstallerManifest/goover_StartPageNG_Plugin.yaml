@@ -1,0 +1,19 @@
+AddonId: goover_StartPageNG_Plugin
+Packages:
+  - Version: 1.0.0
+    RequiredApiVersion: 6.18.0
+    ReleaseDate: 2026-10-04
+    PackageUrl: https://github.com/gOOvER/Playnite-StartPage/releases/download/v1.0.0/goover_StartPageNG_Plugin_1_0_0.pext
+    Changelog:
+      - Initial release of StartPageNG (Fork of felixkmh/StartPage-for-Playnite)
+      - Added Category grouping option for shelves
+      - Dynamic PlayniteAchievements cache path discovery (local saves & custom paths support)
+      - Theme-adaptive context menu foreground color for high contrast in all themes
+      - StartPage sidebar icon automatically positioned at the top of the sidebar by default
+      - Fixed fatal crash on StartPage load with null achievement icon
+      - Fixed shuffle button on game shelves
+      - Fixed settings and shelf configurations not saving
+      - Fixed wrong title in Weekly Activity header
+      - Fixed ScoreComparer and GridNode enumeration bugs
+      - Eliminated GC.Collect stalls and synchronous UI file I/O
+      - Migrated project format to modern SDK-style and updated PlayniteSDK to 6.18.0

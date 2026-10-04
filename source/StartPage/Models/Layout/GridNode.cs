@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -81,7 +81,7 @@ namespace LandingPage.Models.Layout
             {
                 foreach(var node in child.Enumerate())
                 {
-                    yield return child;
+                    yield return node;
                 }
             }
         }

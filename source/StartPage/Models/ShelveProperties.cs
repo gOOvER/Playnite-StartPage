@@ -1,4 +1,4 @@
-﻿using LandingPage.Converters;
+using LandingPage.Converters;
 using Playnite.SDK;
 using System;
 using System.Collections.Generic;
@@ -65,7 +65,9 @@ namespace LandingPage.Models
         [Description("LOCLibrary")]
         Library,
         [Description("LOCCompletionStatus")]
-        CompletionStatus
+        CompletionStatus,
+        [Description("LOCCategoriesLabel")]
+        Category
     }
 
     public class ShelveProperties : ObservableObject

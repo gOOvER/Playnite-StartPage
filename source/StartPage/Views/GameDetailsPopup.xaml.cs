@@ -1,4 +1,4 @@
-﻿using LandingPage.Models;
+using LandingPage.Models;
 using Playnite.SDK.Controls;
 using Playnite.SDK.Plugins;
 using System;
@@ -56,18 +56,17 @@ namespace LandingPage.Views
             }
         }
 
-        static readonly Random rng = new Random();
-
         private void Description_Closed(object sender, EventArgs e)
         {
             if (Player is MediaElement element)
             {
                 element.Volume = 0;
-                element.IsMuted = element.Volume <= 0;
-            }
-            if (rng.NextDouble() <= 0.25)
-            {
-                GC.Collect();
+                element.IsMuted = true;
+                try
+                {
+                    element.Stop();
+                }
+                catch { }
             }
         }
 
@@ -77,6 +76,11 @@ namespace LandingPage.Views
             {
                 element.Volume = Math.Pow(Volume, 2);
                 element.IsMuted = element.Volume <= 0; 
+                try
+                {
+                    element.Play();
+                }
+                catch { }
             }
         }
     }

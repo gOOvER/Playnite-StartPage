@@ -1,4 +1,4 @@
-﻿using PlayniteCommon.Extensions;
+using PlayniteCommon.Extensions;
 using LandingPage.Models;
 using LandingPage.Models.Layout;
 using LandingPage.ViewModels.Layout;
@@ -51,6 +51,7 @@ namespace LandingPage.ViewModels
         public ICommand ClearNotificationsCommand { get; set; }
         public ICommand EnterEditModeCommand { get; set; }
         public ICommand ExitEditModeCommand { get; set; }
+        public ICommand ResetLayoutCommand { get; set; }
 
 
         private bool isLoading = false;
@@ -91,11 +92,12 @@ namespace LandingPage.ViewModels
                     var currentTime = DateTime.Now.RoundToClosestMinute();
                     if (currentTime != Time)
                     {
-                        if (currentTime.DayOfYear != Time.DayOfYear)
-                        {
-                            DayChanged(Time);
-                        }
+                        var previousTime = Time;
                         Time = currentTime;
+                        if (currentTime.DayOfYear != previousTime.DayOfYear)
+                        {
+                            DayChanged(currentTime);
+                        }
                     }
                 },
                 Application.Current.Dispatcher
@@ -120,7 +122,16 @@ namespace LandingPage.ViewModels
                 GridNode.Minimize(RootNodeViewModel.GridNode, null);
                 settings.Settings.GridLayout = RootNodeViewModel.GridNode;
                 landingPage.SavePluginSettings(settings.Settings);
-                GC.Collect();
+            });
+
+            ResetLayoutCommand = new RelayCommand(async () =>
+            {
+                var newLayout = landingPage.LoadDefaultLayout();
+                settings.Settings.GridLayout = newLayout;
+                RootNodeViewModel.GridNode = newLayout;
+                await RootNodeViewModel.InititalizeGrid();
+                await InitializeAndOpenViews();
+                landingPage.SavePluginSettings(settings.Settings);
             });
 
             
@@ -224,11 +235,13 @@ namespace LandingPage.ViewModels
             }
             await Task.WhenAll(tasks);
 
+            clock?.Start();
             Subscribe();
         }
 
         public async Task Closed()
         {
+            clock?.Stop();
             RootNodeViewModel.EditModeEnabled = false;
             Unsubscribe();
             foreach (var view in RootNodeViewModel.ActiveViews)
@@ -263,7 +276,7 @@ namespace LandingPage.ViewModels
                     }
                     catch (Exception ex)
                     {
-                        LandingPageExtension.logger.Warn(ex, "Error when calling OnStartPageOpened()");
+                        LandingPageExtension.logger.Warn(ex, "Error when calling OnViewHiddenAsync()");
                     }
                 }
                 if (view.view is FrameworkElement asyncElement && asyncElement.DataContext is IAsyncStartPageControl asyncContext)
@@ -274,9 +287,18 @@ namespace LandingPage.ViewModels
                     }
                     catch (Exception ex)
                     {
-                        LandingPageExtension.logger.Warn(ex, "Error when calling OnStartPageOpened()");
+                        LandingPageExtension.logger.Warn(ex, "Error when calling OnViewHiddenAsync()");
                     }
                 }
+            }
+
+            try
+            {
+                plugin?.SavePluginSettings(settings?.Settings);
+            }
+            catch (Exception ex)
+            {
+                LandingPageExtension.logger.Warn(ex, "Error when saving plugin settings on StartPage close.");
             }
         }
 

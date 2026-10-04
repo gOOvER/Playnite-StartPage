@@ -1,4 +1,4 @@
-﻿using LandingPage.Converters;
+using LandingPage.Converters;
 using PlayniteCommon.Extensions;
 using LandingPage.Models;
 using LandingPage.Models.GameActivity;
@@ -229,7 +229,18 @@ namespace LandingPage.ViewModels.GameActivity
                         if (specialGames.Count > i)
                         {
                             specialGames[i].Label = groups[i].Label;
-                            specialGames[i].Games[0].Game = groups[i].Games[0].Game;
+                            if (specialGames[i].Games.Count > 0 && groups[i].Games.Count > 0)
+                            {
+                                specialGames[i].Games[0].Game = groups[i].Games[0].Game;
+                            }
+                            else
+                            {
+                                specialGames[i].Games.Clear();
+                                foreach (var g in groups[i].Games)
+                                {
+                                    specialGames[i].Games.Add(g);
+                                }
+                            }
                         }
                         else
                         {
@@ -290,23 +301,28 @@ namespace LandingPage.ViewModels.GameActivity
                 else
                 {
                     GameActivityViewModel.ActivityLock.EnterReadLock();
+                    var mostPlayedGame = default(Game);
+                    try
+                    {
+                        var thisWeek = GameActivityViewModel.Activities
+                            .Select(a => new { Game = playniteAPI.Database.Games.Get(a.Id), Items = a.Items.Where(i => options.Timeframe == Timeframe.AllTime || i.DateSession.Add(options.TimeSpan) >= DateTime.Today).ToList() })
+                            .Where(a => a.Game is Game && a.Items?.Count > 0)
+                            .Where(a => !a.Game.Hidden || settings.Settings.ShowHiddenInMostPlayed)
+                            .Where(a => !(a.Game.TagIds?.Contains(tagId) ?? false))
+                            .Select(a => new { Game = a.Game, Playtime = a.Items.Sum(i => (long)i.ElapsedSeconds) });
+                        thisWeek = thisWeek
+                            .OrderByDescending(a => a.Playtime)
+                            .Skip(Math.Max(0, Math.Min(options.SkippedGames, thisWeek.Count())));
 
-                    var thisWeek = GameActivityViewModel.Activities
-                        .Select(a => new { Game = playniteAPI.Database.Games.Get(a.Id), Items = a.Items.Where(i => options.Timeframe == Timeframe.AllTime || i.DateSession.Add(options.TimeSpan) >= DateTime.Today).ToList() })
-                        .Where(a => a.Game is Game && a.Items?.Count > 0)
-                        .Where(a => !a.Game.Hidden || settings.Settings.ShowHiddenInMostPlayed)
-                        .Where(a => !(a.Game.TagIds?.Contains(tagId) ?? false))
-                        .Select(a => new { Game = a.Game, Playtime = a.Items.Sum(i => (long)i.ElapsedSeconds) });
-                    thisWeek = thisWeek
-                        .OrderByDescending(a => a.Playtime)
-                        .Skip(Math.Max(0, Math.Min(options.SkippedGames, thisWeek.Count())));
+                        thisWeek = thisWeek.Where(a => !settings.Settings.SkipGamesInPreviousMostPlayed || !groups.Any(group => group.Games.Any(m => m.Game == a.Game)));
+                        mostPlayedGame = thisWeek.FirstOrDefault()?.Game;
+                    }
+                    finally
+                    {
+                        GameActivityViewModel.ActivityLock.ExitReadLock();
+                    }
 
-                    thisWeek = thisWeek.Where(a => !settings.Settings.SkipGamesInPreviousMostPlayed || !groups.Any(group => group.Games.Any(m => m.Game == a.Game)));
-                    var mostPlayedThisWeek = thisWeek.FirstOrDefault();
-
-                    GameActivityViewModel.ActivityLock.ExitReadLock();
-
-                    if (mostPlayedThisWeek?.Game is Game)
+                    if (mostPlayedGame is Game)
                     {
                         var group = groups.LastOrDefault();
                         var groupLabel = converter.ConvertToString(options.Timeframe);
@@ -314,7 +330,7 @@ namespace LandingPage.ViewModels.GameActivity
                         {
                             group = new GameGroup() { Label = groupLabel };
                         }
-                        group.Games.Add(new GameModel(mostPlayedThisWeek.Game));
+                        group.Games.Add(new GameModel(mostPlayedGame));
                         if (!groups.Contains(group))
                         {
                             groups.Add(group);
@@ -334,7 +350,18 @@ namespace LandingPage.ViewModels.GameActivity
                 if (specialGames.Count > i)
                 {
                     specialGames[i].Label = groups[i].Label;
-                    specialGames[i].Games[0].Game = groups[i].Games[0].Game;
+                    if (specialGames[i].Games.Count > 0 && groups[i].Games.Count > 0)
+                    {
+                        specialGames[i].Games[0].Game = groups[i].Games[0].Game;
+                    }
+                    else
+                    {
+                        specialGames[i].Games.Clear();
+                        foreach (var g in groups[i].Games)
+                        {
+                            specialGames[i].Games.Add(g);
+                        }
+                    }
                 }
                 else
                 {
@@ -372,6 +399,13 @@ namespace LandingPage.ViewModels.GameActivity
         {
             GameActivityViewModel.Activities.CollectionChanged -= Activities_CollectionChanged;
             GameActivityViewModel.PropertyChanged -= GameActivityViewModel_PropertyChangedAsync;
+            settings.Settings.PropertyChanged -= Settings_PropertyChangedAsync;
+            settings.PropertyChanged -= SettingsViewModel_PropertyChangedAsync;
+            settings.Settings.MostPlayedOptions.CollectionChanged -= MostPlayedOptions_CollectionChanged;
+            foreach (var options in settings.Settings.MostPlayedOptions)
+            {
+                options.PropertyChanged -= Options_PropertyChangedAsync;
+            }
         }
 
         public Task OnViewShownAsync()

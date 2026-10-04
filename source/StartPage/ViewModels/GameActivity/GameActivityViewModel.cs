@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -27,16 +27,32 @@ namespace LandingPage.ViewModels.GameActivity
         internal FileSystemWatcher activityWatcher;
         internal LandingPageSettingsViewModel landingPageSettingsViewModel;
 
+        private static readonly GameSource DefaultPlayniteSource = new GameSource("Playnite");
+
         private ObservableCollection<Activity> activities = new ObservableCollection<Activity>();
-        public ObservableCollection<Activity> Activities { get => activities; set => SetValue(ref activities, value); }
+        public ObservableCollection<Activity> Activities
+        {
+            get => activities;
+            set
+            {
+                if (activities != null)
+                {
+                    activities.CollectionChanged -= Activities_CollectionChanged;
+                }
+                SetValue(ref activities, value);
+                if (activities != null)
+                {
+                    activities.CollectionChanged += Activities_CollectionChanged;
+                }
+            }
+        }
 
         public readonly ReaderWriterLockSlim ActivityLock = new ReaderWriterLockSlim();
 
         public Dictionary<GameSource, ulong> PlaytimePerSource => Activities
             .SelectMany(activity => activity.Items)
-            .GroupBy(session => session.SourceID)
-            .Select(g => new { SourceId = g.First().SourceID, Playtime = g.Sum(s => (long)s.ElapsedSeconds) })
-            .ToDictionary(item => playniteAPI.Database.Sources.Get(item.SourceId) ?? new GameSource("Playnite"), item => (ulong)item.Playtime);
+            .GroupBy(session => playniteAPI.Database.Sources.Get(session.SourceID) ?? DefaultPlayniteSource)
+            .ToDictionary(g => g.Key, g => (ulong)g.Sum(s => (long)s.ElapsedSeconds));
 
         public class DayPlaytime
         {
@@ -106,7 +122,6 @@ namespace LandingPage.ViewModels.GameActivity
         {
             if (e.PropertyName == nameof(Activities))
             {
-                Activities.CollectionChanged += Activities_CollectionChanged;
                 await UpdatePlaytimeLastWeekAsync();
             }
         }
@@ -171,7 +186,6 @@ namespace LandingPage.ViewModels.GameActivity
             if (activities is ObservableCollection<Activity>)
             {
                 Activities = activities;
-                Activities.CollectionChanged += Activities_CollectionChanged;
             }
             IsBusy = false;
         }
@@ -202,11 +216,10 @@ namespace LandingPage.ViewModels.GameActivity
                     if (t.Result is ObservableCollection<Activity> collection)
                     {
                         Activities = collection;
-                        Activities.CollectionChanged += Activities_CollectionChanged;
                     }
                     t?.Dispose();
                 }));
-                IsBusy = true;
+                IsBusy = false;
             });
         }
 
@@ -351,6 +364,21 @@ namespace LandingPage.ViewModels.GameActivity
         public Task OnDayChangedAsync(DateTime newTime)
         {
             return Task.CompletedTask;
+        }
+
+        public void OnViewClosed()
+        {
+            if (activityWatcher != null)
+            {
+                activityWatcher.EnableRaisingEvents = false;
+                activityWatcher.Dispose();
+                activityWatcher = null;
+            }
+            PropertyChanged -= GameActivityViewModel_PropertyChangedAsync;
+            if (activities != null)
+            {
+                activities.CollectionChanged -= Activities_CollectionChanged;
+            }
         }
     }
 }

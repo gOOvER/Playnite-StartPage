@@ -1,4 +1,4 @@
-﻿using LandingPage.Models;
+using LandingPage.Models;
 using Playnite.SDK;
 using Playnite.SDK.Models;
 using System;
@@ -20,7 +20,9 @@ namespace LandingPage.ViewModels
     {
         protected IPlayniteAPI playniteAPI;
 
-        protected static Random random = new Random();
+        [ThreadStatic]
+        private static Random _threadRandom;
+        protected static Random ThreadSafeRandom => _threadRandom ?? (_threadRandom = new Random());
 
         private ShelveProperties shelveProperties = ShelveProperties.RecentlyPlayed;
         public ShelveProperties ShelveProperties { get => shelveProperties; set => SetValue(ref shelveProperties, value); }
@@ -267,7 +269,7 @@ namespace LandingPage.ViewModels
 
             public int Compare(object x, object y)
             {
-                return Compare((int?)x, (int?)x);
+                return Compare((int?)x, (int?)y);
             }
 
             public int Compare(int? x, int? y)
@@ -348,6 +350,14 @@ namespace LandingPage.ViewModels
                 case GroupingField.CompletionStatus:
                     {
                         newGroupDescription.PropertyName = "Game.CompletionStatus";
+                        var newSortDescription = new SortDescription { Direction = (ListSortDirection)shelveProperties.Order, PropertyName = "Name" };
+                        newGroupDescription.SortDescriptions.Add(newSortDescription);
+                        groupDescriptions.Add(newGroupDescription);
+                        break;
+                    }
+                case GroupingField.Category:
+                    {
+                        newGroupDescription.PropertyName = "CategoryGroup";
                         var newSortDescription = new SortDescription { Direction = (ListSortDirection)shelveProperties.Order, PropertyName = "Name" };
                         newGroupDescription.SortDescriptions.Add(newSortDescription);
                         groupDescriptions.Add(newGroupDescription);
@@ -467,45 +477,47 @@ namespace LandingPage.ViewModels
             var gameSelection = await GetGamesAsync(shelveProperties);
 
             var collection = Games;
-            var changed = false;
 
             using (var defer = CollectionViewSource.DeferRefresh())
             {
-                foreach (var game in gameSelection)
-                {
-                    if (collection.FirstOrDefault(item => item.Game?.Id == game.Id) is GameModel model)
-                    {
-                        if (model.Game.LastActivity != game.LastActivity)
-                        {
-                            changed = true;
-                        }
-                    }
-                    else if (collection.FirstOrDefault(item => gameSelection.All(s => s.Id != item.Game?.Id)) is GameModel unusedModel)
-                    {
-                        changed = true;
-                        collection.Remove(unusedModel);
-                        unusedModel.Game = game;
-                        collection.Add(unusedModel);
-                    }
-                    else
-                    {
-                        changed = true;
-                        collection.Add(new GameModel(game));
-                    }
-                }
                 for (int j = collection.Count - 1; j >= 0; --j)
                 {
                     if (gameSelection.All(g => g.Id != collection[j].Game?.Id))
                     {
-                        changed = true;
                         collection.RemoveAt(j);
                     }
                 }
-                if (changed && collection.Count > 1)
+
+                for (int i = 0; i < gameSelection.Count; i++)
                 {
-                    collection.Move(collection.Count - 1, 0);
-                    collection.Move(collection.Count - 1, 0);
-                    GC.Collect();
+                    var targetGame = gameSelection[i];
+                    var existingIndex = -1;
+                    for (int j = i; j < collection.Count; j++)
+                    {
+                        if (collection[j].Game?.Id == targetGame.Id)
+                        {
+                            existingIndex = j;
+                            break;
+                        }
+                    }
+
+                    if (existingIndex == i)
+                    {
+                        // Already in place
+                    }
+                    else if (existingIndex > i)
+                    {
+                        collection.Move(existingIndex, i);
+                    }
+                    else
+                    {
+                        collection.Insert(i, new GameModel(targetGame));
+                    }
+                }
+
+                while (collection.Count > gameSelection.Count)
+                {
+                    collection.RemoveAt(collection.Count - 1);
                 }
             }
             IsBusy = false;
@@ -528,47 +540,50 @@ namespace LandingPage.ViewModels
             IEnumerable<Game> gameSelection = GetGames(shelveProperties);
 
             var collection = Games;
-            var changed = false;
 
             Application.Current.Dispatcher.Invoke(() =>
             {
                 using (var defer = CollectionViewSource.DeferRefresh())
                 {
-                    foreach (var game in gameSelection)
-                    {
-                        if (collection.FirstOrDefault(item => item.Game?.Id == game.Id) is GameModel model)
-                        {
-                            if (model.Game.LastActivity != game.LastActivity)
-                            {
-                                changed = true;
-                            }
-                        }
-                        else if (collection.FirstOrDefault(item => gameSelection.All(s => s.Id != item.Game?.Id)) is GameModel unusedModel)
-                        {
-                            changed = true;
-                            collection.Remove(unusedModel);
-                            unusedModel.Game = game;
-                            collection.Add(unusedModel);
-                        }
-                        else
-                        {
-                            changed = true;
-                            collection.Add(new GameModel(game));
-                        }
-                    }
+                    var selectionList = gameSelection as IList<Game> ?? gameSelection.ToList();
                     for (int j = collection.Count - 1; j >= 0; --j)
                     {
-                        if (gameSelection.All(g => g.Id != collection[j].Game?.Id))
+                        if (selectionList.All(g => g.Id != collection[j].Game?.Id))
                         {
-                            changed = true;
                             collection.RemoveAt(j);
                         }
                     }
-                    if (changed && collection.Count > 1)
+
+                    for (int i = 0; i < selectionList.Count; i++)
                     {
-                        collection.Move(collection.Count - 1, 0);
-                        collection.Move(collection.Count - 1, 0);
-                        GC.Collect();
+                        var targetGame = selectionList[i];
+                        var existingIndex = -1;
+                        for (int j = i; j < collection.Count; j++)
+                        {
+                            if (collection[j].Game?.Id == targetGame.Id)
+                            {
+                                existingIndex = j;
+                                break;
+                            }
+                        }
+
+                        if (existingIndex == i)
+                        {
+                            // Already in place
+                        }
+                        else if (existingIndex > i)
+                        {
+                            collection.Move(existingIndex, i);
+                        }
+                        else
+                        {
+                            collection.Insert(i, new GameModel(targetGame));
+                        }
+                    }
+
+                    while (collection.Count > selectionList.Count)
+                    {
+                        collection.RemoveAt(collection.Count - 1);
                     }
                 }
             });
@@ -656,7 +671,7 @@ namespace LandingPage.ViewModels
                     games = OrderBy(games, g => g.CompletionStatus, shelveProperties.Order);
                     break;
                 case SortingField.Random:
-                    games = games.OrderBy(g => random.Next());
+                    games = games.OrderBy(g => ThreadSafeRandom.Next());
                     break;
                 default:
                     break;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -13,7 +13,7 @@ using PlayniteCommon.Extensions;
 
 namespace LandingPage.Models
 {
-    public class Clock : INotifyPropertyChanged
+    public class Clock : INotifyPropertyChanged, IDisposable
     {
         internal DispatcherTimer dispatcherTimer;
         internal DispatcherTimer leetTimer;
@@ -162,6 +162,20 @@ namespace LandingPage.Models
         private void OnPropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        public void Dispose()
+        {
+            if (dispatcherTimer != null)
+            {
+                dispatcherTimer.Stop();
+                dispatcherTimer = null;
+            }
+            if (leetTimer != null)
+            {
+                leetTimer.Stop();
+                leetTimer = null;
+            }
         }
     }
 }

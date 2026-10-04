@@ -1,14 +1,16 @@
-﻿Id: felixkmh_StartPage_Plugin
-Name: StartPage
-Author: felixkmh
-Version: 2.14.1
+Id: goover_StartPageNG_Plugin
+Name: StartPageNG
+Author: gOOvER
+Version: 1.0.0
 Module: StartPagePlugin.dll
 Type: GenericPlugin
 Icon: icon.png
 Links:
+  - Name: Website
+    Url: https://playnite.goover.dev
   - Name: GitHub
+    Url: https://github.com/gOOvER/Playnite-StartPage
+  - Name: Ko-fi
+    Url: https://ko-fi.com/goover
+  - Name: Original Add-on (felixkmh)
     Url: https://github.com/felixkmh/StartPage-for-Playnite
-  - Name: Playnite Forum
-    Url: https://playnite.link/forum/thread-930-post-6631.html
-  - Name: Translate
-    Url: https://crowdin.com/project/startpage-for-playnite

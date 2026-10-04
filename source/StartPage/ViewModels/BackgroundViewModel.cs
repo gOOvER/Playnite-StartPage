@@ -1,4 +1,4 @@
-﻿using LandingPage.Models;
+using LandingPage.Models;
 using Playnite.SDK;
 using Playnite.SDK.Models;
 using PlayniteCommon.Extensions;
@@ -460,7 +460,6 @@ namespace LandingPage.ViewModels
                             }
                             backgroundImageTimer.Stop();
                             stopwatch.Stop();
-                            GC.Collect();
                         }
                     };
                 }

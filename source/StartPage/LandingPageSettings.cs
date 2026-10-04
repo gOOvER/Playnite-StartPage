@@ -1,4 +1,4 @@
-﻿using LandingPage.Converters;
+using LandingPage.Converters;
 using LandingPage.Models;
 using LandingPage.Models.GameActivity;
 using LandingPage.Models.Layout;
@@ -168,7 +168,7 @@ namespace LandingPage
         private LayoutProperties layoutSettings = new LayoutProperties();
         public LayoutProperties LayoutSettings { get => layoutSettings; set => SetValue(ref layoutSettings, value); }
 
-        private bool moveToTopOfList = false;
+        private bool moveToTopOfList = true;
         public bool MoveToTopOfList { get => moveToTopOfList; set => SetValue(ref moveToTopOfList, value); }
 
         private string backgroundImagePath = null;
@@ -202,7 +202,7 @@ namespace LandingPage
         public bool SkipGamesInPreviousMostPlayed { get => skipGamesInPreviousMostPlayed; set => SetValue(ref skipGamesInPreviousMostPlayed, value); }
 
         private bool enableTagCreation = false;
-        public bool EnableTagCreation { get => enableTagCreation; set => enableTagCreation = value; }
+        public bool EnableTagCreation { get => enableTagCreation; set => SetValue(ref enableTagCreation, value); }
 
         private bool downScaleCovers = true;
         public bool DownScaleCovers { get => downScaleCovers; set => SetValue(ref downScaleCovers, value); }
@@ -229,14 +229,14 @@ namespace LandingPage
         public Guid IgnoreTagId
         {
             get => ignoreTagId;
-            set => ignoreTagId = value;
+            set => SetValue(ref ignoreTagId, value);
         }
 
         private Guid ignoreMostPlayedTagId = Guid.Empty;
         public Guid IgnoreMostPlayedTagId
         {
             get => ignoreMostPlayedTagId;
-            set => ignoreMostPlayedTagId = value;
+            set => SetValue(ref ignoreMostPlayedTagId, value);
         }
 
         private bool showHiddenInMostPlayed = false;
